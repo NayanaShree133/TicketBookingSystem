@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: ticket-app
+type: Opaque
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdA==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb
+  namespace: ticket-app
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS ticketdb;
+
+    USE ticketdb;
+
+    CREATE TABLE IF NOT EXISTS events (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100),
+      location VARCHAR(100),
+      price INT,
+      available_seats INT
+    );
+
+    CREATE TABLE IF NOT EXISTS bookings (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      event_id INT,
+      customer_name VARCHAR(100),
+      email VARCHAR(100),
+      tickets INT,
+      booking_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT INTO events (name, location, price, available_seats)
+    VALUES
+    ('Coldplay Live Concert', 'Bangalore', 4500, 200),
+    ('IPL Final Match', 'Chinnaswamy Stadium', 3500, 150),
+    ('Tech Conference 2026', 'Bangalore Palace', 1200, 300),
+    ('Standup Comedy Night', 'Indiranagar', 800, 100);
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: ticket-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: ticketdb
+          volumeMounts:
+            - name: mysql-initdb
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-initdb
+          configMap:
+            name: mysql-initdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: ticket-app
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
