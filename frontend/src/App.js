@@ -62,7 +62,7 @@ function App() {
       </nav>
 
       <section className="hero">
-        <h1>Book Your Favourite Events</h1>
+        <h1>Book Your Favourite Events-- demo CI/CD</h1>
         <p>
           Concerts, sports, tech events and comedy shows — all in one simple
           platform.
